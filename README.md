@@ -2,12 +2,15 @@
 
 simple scope LV2 plugin
 
-![XWaveView](https://github.com/brummer10/XWaveView.lv2/raw/master/XWaveView.png)
+RMS                        |  Direct
+:-------------------------:|:-------------------------:
+![XWaveView](https://github.com/brummer10/XWaveView.lv2/raw/master/XWaveView.png) | ![XWaveView](https://github.com/brummer10/XWaveView.lv2/raw/master/XWaveView_direct.png)
 
 
 ## Features
 
 - Display RMS waveform
+- Display direct waveform
 
 
 ## Dependencys
