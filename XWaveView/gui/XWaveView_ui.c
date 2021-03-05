@@ -121,6 +121,7 @@ void draw_waveview(void *w_, void* user_data) {
     WaveView_t *wave_view = (WaveView_t*)w->private_struct;
     XWindowAttributes attrs;
     XGetWindowAttributes(w->app->dpy, (Window)w->widget, &attrs);
+    if (attrs.map_state != IsViewable) return;
     int width_t = attrs.width;
     int height_t = attrs.height;
     int half_height_t = height_t/2;
@@ -148,28 +149,23 @@ void draw_waveview(void *w_, void* user_data) {
     float step = (float)(width_t-10)/(float)wave_view->size+1;
     float lstep = (float)(half_height_t-10.0);
     cairo_set_line_width(w->cr,2);
-    use_fg_color_scheme(w, NORMAL_);
+    cairo_move_to(w->crb, 2, half_height_t);
     int i = 0;
     for (;i<wave_view->size;i++) {
         cairo_line_to(w->crb, (float)(i+0.5)*step,(float)(half_height_t)+ -wave_view->wave[i]*lstep);
     }
-    cairo_line_to(w->crb, width_t, half_height_t);
-    cairo_line_to(w->crb, 2, half_height_t);
+
+    for (;i>-1;i--) {
+        cairo_line_to(w->crb, (float)(i+0.5)*step,(float)(half_height_t)+ wave_view->wave[i]*lstep);
+    }
+
     cairo_close_path(w->crb);
     use_light_color_scheme(w, NORMAL_);
     cairo_fill_preserve(w->crb);
     use_fg_color_scheme(w, NORMAL_);
     cairo_stroke(w->crb);
-    i = 0;
-    for (;i<wave_view->size;i++) {
-        cairo_line_to(w->crb, (float)(i+0.5)*step,(float)(half_height_t)+ wave_view->wave[i]*lstep);
-    }
+    cairo_move_to(w->crb, 2, half_height_t);
     cairo_line_to(w->crb, width_t, half_height_t);
-    cairo_line_to(w->crb, 2, half_height_t);
-    cairo_close_path(w->crb);
-    use_light_color_scheme(w, NORMAL_);
-    cairo_fill_preserve(w->crb);
-    use_fg_color_scheme(w, NORMAL_);
     cairo_stroke(w->crb);
 }
 
@@ -194,8 +190,10 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
     ui->private_ptr = (void*)ps;
     set_costum_theme(&ui->main);
     ui->widget[0] = add_lv2_waveview (ui->widget[0], ui->win, NOTIFY, "RMS", ui, 10,  10, 300, 180);
+    ui->widget[0]->scale.gravity = NORTHWEST;
     ui->widget[0]->func.expose_callback = draw_waveview;
     ps->osc_scale = add_knob(ui->win, "Scale", 260,190,50,65);
+    ps->osc_scale->scale.gravity = SOUTHWEST;
     set_adjustment(ps->osc_scale->adj, 2.0, 2.0, 1.0, 4.0, 0.1, CL_CONTINUOS);
 }
 

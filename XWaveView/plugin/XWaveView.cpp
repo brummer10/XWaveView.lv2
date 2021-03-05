@@ -61,21 +61,15 @@ public:
     static void run(LV2_Handle instance, uint32_t n_samples);
     static void connect_port(LV2_Handle instance, uint32_t port, void* data);
     static LV2_Handle instantiate(const LV2_Descriptor* descriptor,
-                                double rate, const char* bundle_path,
-                                const LV2_Feature* const* features);
-  XWaveView();
-  ~XWaveView();
+                                  double rate, const char* bundle_path,
+                                  const LV2_Feature* const* features);
+    XWaveView();
 };
 
 // constructor
 XWaveView::XWaveView() :
-  output(NULL),
-  input(NULL) {};
-
-// destructor
-XWaveView::~XWaveView()
-{
-};
+    output(NULL),
+    input(NULL) {};
 
 ///////////////////////// PRIVATE CLASS  FUNCTIONS /////////////////////
 
@@ -87,19 +81,19 @@ void XWaveView::init_dsp_(uint32_t rate)
 // connect the Ports used by the plug-in class
 void XWaveView::connect_(uint32_t port,void* data)
 {
-  switch ((PortIndex)port)
+    switch ((PortIndex)port)
     {
     case EFFECTS_OUTPUT:
-      output = static_cast<float*>(data);
-      break;
+        output = static_cast<float*>(data);
+        break;
     case EFFECTS_INPUT:
-      input = static_cast<float*>(data);
-      break;
+        input = static_cast<float*>(data);
+        break;
     case NOTIFY:
         notify = (LV2_Atom_Sequence*)data;
         break;
     default:
-      break;
+        break;
     }
 }
 
@@ -127,16 +121,16 @@ void XWaveView::run_dsp_(uint32_t n_samples)
 
 void XWaveView::connect_all__ports(uint32_t port, void* data)
 {
-  // connect the Ports used by the plug-in class
-  connect_(port,data); 
+    // connect the Ports used by the plug-in class
+    connect_(port,data);
 }
 
 ////////////////////// STATIC CLASS  FUNCTIONS  ////////////////////////
 
-LV2_Handle 
+LV2_Handle
 XWaveView::instantiate(const LV2_Descriptor* descriptor,
-                            double rate, const char* bundle_path,
-                            const LV2_Feature* const* features)
+                       double rate, const char* bundle_path,
+                       const LV2_Feature* const* features)
 {
     LV2_URID_Map* map = NULL;
     for (int i = 0; features[i]; ++i) {
@@ -146,54 +140,54 @@ XWaveView::instantiate(const LV2_Descriptor* descriptor,
     }
     if (!map) {
         return NULL;
-    } 
+    }
 
-  // init the plug-in class
-  XWaveView *self = new XWaveView();
-  if (!self) {
-    return NULL;
-  }
+    // init the plug-in class
+    XWaveView *self = new XWaveView();
+    if (!self) {
+        return NULL;
+    }
 
     map_osclv2_uris(map, &self->uris);
     lv2_atom_forge_init(&self->forge, map);
 
     self->map = map;
 
-  self->init_dsp_((uint32_t)rate);
+    self->init_dsp_((uint32_t)rate);
 
-  return (LV2_Handle)self;
+    return (LV2_Handle)self;
 }
 
-void XWaveView::connect_port(LV2_Handle instance, 
-                                   uint32_t port, void* data)
+void XWaveView::connect_port(LV2_Handle instance,
+                             uint32_t port, void* data)
 {
-  // connect all ports
-  static_cast<XWaveView*>(instance)->connect_all__ports(port, data);
+    // connect all ports
+    static_cast<XWaveView*>(instance)->connect_all__ports(port, data);
 }
 
 void XWaveView::run(LV2_Handle instance, uint32_t n_samples)
 {
-  // run dsp
-  static_cast<XWaveView*>(instance)->run_dsp_(n_samples);
+    // run dsp
+    static_cast<XWaveView*>(instance)->run_dsp_(n_samples);
 }
 
 void XWaveView::cleanup(LV2_Handle instance)
 {
-  // well, clean up after us
-  XWaveView* self = static_cast<XWaveView*>(instance);
-  delete self;
+    // well, clean up after us
+    XWaveView* self = static_cast<XWaveView*>(instance);
+    delete self;
 }
 
 const LV2_Descriptor XWaveView::descriptor =
 {
-  PLUGIN_URI ,
-  XWaveView::instantiate,
-  XWaveView::connect_port,
-  NULL,
-  XWaveView::run,
-  NULL,
-  XWaveView::cleanup,
-  NULL
+    PLUGIN_URI,
+    XWaveView::instantiate,
+    XWaveView::connect_port,
+    NULL,
+    XWaveView::run,
+    NULL,
+    XWaveView::cleanup,
+    NULL
 };
 
 
@@ -206,12 +200,12 @@ LV2_SYMBOL_EXPORT
 const LV2_Descriptor*
 lv2_descriptor(uint32_t index)
 {
-  switch (index)
+    switch (index)
     {
     case 0:
-      return &osc::XWaveView::descriptor;
+        return &osc::XWaveView::descriptor;
     default:
-      return NULL;
+        return NULL;
     }
 }
 

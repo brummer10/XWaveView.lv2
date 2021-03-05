@@ -93,10 +93,10 @@ static void draw_window(void *w_, void* user_data) {
     cairo_text_extents(w->crb,w->label , &extents);
     double tw = extents.width/2.0;
 
-    widget_set_scale(w);
-    cairo_move_to (w->crb, (w->scale.init_width*0.5)-tw, w->scale.init_height-10 );
+    //widget_set_scale(w);
+    cairo_move_to (w->crb, (w->width*0.5)-tw, w->height-10 );
     cairo_show_text(w->crb, w->label);
-    widget_reset_scale(w);
+    //widget_reset_scale(w);
     cairo_new_path (w->crb);
 }
 
