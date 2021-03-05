@@ -38,7 +38,10 @@ typedef struct {
 
     OSCLV2URIs   uris;
     Widget_t* osc_scale;
+    Widget_t* osc_mode;
+    int mode;
     float *osc;
+    float *dosc;
 
 } X11_UI_Private_t;
 
@@ -118,6 +121,8 @@ void rounded_waveview(cairo_t *cr,float x, float y, float w, float h, float lsiz
 
 void draw_waveview(void *w_, void* user_data) {
     Widget_t *w = (Widget_t*)w_;
+    X11_UI* ui = (X11_UI*)w->parent_struct;
+    X11_UI_Private_t *ps = (X11_UI_Private_t*)ui->private_ptr;
     WaveView_t *wave_view = (WaveView_t*)w->private_struct;
     XWindowAttributes attrs;
     XGetWindowAttributes(w->app->dpy, (Window)w->widget, &attrs);
@@ -154,19 +159,41 @@ void draw_waveview(void *w_, void* user_data) {
     for (;i<wave_view->size;i++) {
         cairo_line_to(w->crb, (float)(i+0.5)*step,(float)(half_height_t)+ -wave_view->wave[i]*lstep);
     }
-
-    for (;i>-1;i--) {
-        cairo_line_to(w->crb, (float)(i+0.5)*step,(float)(half_height_t)+ wave_view->wave[i]*lstep);
+    if (!ps->mode) {
+        for (;i>-1;i--) {
+            cairo_line_to(w->crb, (float)(i+0.5)*step,(float)(half_height_t)+ wave_view->wave[i]*lstep);
+        }
+    } else {
+        cairo_line_to(w->crb, width_t, half_height_t);
+        cairo_line_to(w->crb, 2, half_height_t);
     }
-
     cairo_close_path(w->crb);
     use_light_color_scheme(w, NORMAL_);
     cairo_fill_preserve(w->crb);
     use_fg_color_scheme(w, NORMAL_);
     cairo_stroke(w->crb);
-    cairo_move_to(w->crb, 2, half_height_t);
-    cairo_line_to(w->crb, width_t, half_height_t);
-    cairo_stroke(w->crb);
+    if (!ps->mode) {
+        cairo_move_to(w->crb, 2, half_height_t);
+        cairo_line_to(w->crb, width_t, half_height_t);
+        cairo_stroke(w->crb);
+    }
+}
+
+void set_mode(void *w_, void* user_data) {
+    Widget_t *w = (Widget_t*)w_;
+    X11_UI* ui = (X11_UI*)w->parent_struct;
+    X11_UI_Private_t *ps = (X11_UI_Private_t*)ui->private_ptr;
+    if (w->flags & HAS_POINTER) {
+        ps->mode = (int)adj_get_value(w->adj);
+        if (ps->mode) {
+            ui->widget[0]->label = "Direct";
+            w->label = "Direct";
+        } else {
+            ui->widget[0]->label = "RMS";
+            w->label = "RMS";
+        }
+        expose_widget(w);
+    }
 }
 
 void plugin_value_changed(X11_UI *ui, Widget_t *w, PortIndex index) {
@@ -185,6 +212,10 @@ const char* plugin_set_name() {
 void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
     X11_UI_Private_t *ps = (X11_UI_Private_t*)malloc(sizeof(X11_UI_Private_t));
     ps->osc = (float*) malloc(OSCSIZE* sizeof(float));
+    memset(ps->osc,0,OSCSIZE* sizeof(float));
+    ps->dosc = (float*) malloc(OSCSIZE*RMSSIZE* sizeof(float));
+    memset(ps->dosc,0,OSCSIZE*RMSSIZE* sizeof(float));
+    ps->mode = 0;
     map_osclv2_uris(ui->map, &ps->uris);
     lv2_atom_forge_init(&ps->forge, ui->map);
     ui->private_ptr = (void*)ps;
@@ -195,11 +226,16 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
     ps->osc_scale = add_knob(ui->win, "Scale", 260,190,50,65);
     ps->osc_scale->scale.gravity = SOUTHWEST;
     set_adjustment(ps->osc_scale->adj, 2.0, 2.0, 1.0, 4.0, 0.1, CL_CONTINUOS);
+    ps->osc_mode = add_toggle_button(ui->win, "RMS", 210,200,40,40);
+    ps->osc_mode->scale.gravity = SOUTHWEST;
+    ps->osc_mode->parent_struct = ui;
+    ps->osc_mode->func.value_changed_callback = set_mode;
 }
 
 void plugin_cleanup(X11_UI *ui) {
     X11_UI_Private_t *ps = (X11_UI_Private_t*)ui->private_ptr;
     free(ps->osc);
+    free(ps->dosc);
     // clean up used sources when needed
 }
 
@@ -227,24 +263,40 @@ void plugin_port_event(LV2UI_Handle handle, uint32_t port_index,
                     float v = adj_get_value(ps->osc_scale->adj);
                     int i = 0;
                     int j = 0;
-                    for(; i < n_elem ; i++) {
-                        sum += audio[i] * audio[i];
-                        if(j == RMSSIZE) {
-                            ps->osc[k] = sqrtf(sum / RMSSIZE)*v;
-                            sum = 0;
-                            k++;
-                            j = 0;
+                    if (!ps->mode) {
+                        for(; i < n_elem ; i++) {
+                            sum += audio[i] * audio[i];
+                            if(j == RMSSIZE) {
+                                ps->osc[k] = sqrtf(sum / RMSSIZE)*v;
+                                sum = 0;
+                                k++;
+                                j = 0;
+                            }
+                            if (k>OSCSIZE) {
+                                update_waveview(ui->widget[0],ps->osc,OSCSIZE);
+                                k = 0;
+                            }
+                            j++;
                         }
-                        if (k>OSCSIZE) {
+                        if (k>=OSCSIZE) {
                             update_waveview(ui->widget[0],ps->osc,OSCSIZE);
                             k = 0;
                         }
-                        j++;
+                    } else {
+                        for(; i < n_elem ; i++) {
+                            ps->dosc[k] = audio[i]*v;
+                            k++;
+                            if (k>OSCSIZE*RMSSIZE) {
+                                update_waveview(ui->widget[0],ps->dosc,OSCSIZE*RMSSIZE);
+                                k = 0;
+                            }
+                        }
+                        if (k>=OSCSIZE*RMSSIZE) {
+                            update_waveview(ui->widget[0],ps->dosc,OSCSIZE*RMSSIZE);
+                            k = 0;
+                        }
                     }
-                    if (k>=OSCSIZE) {
-                        update_waveview(ui->widget[0],ps->osc,OSCSIZE);
-                        k = 0;
-                    }
+                    
                 }
             }
         }
