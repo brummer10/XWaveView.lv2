@@ -158,16 +158,15 @@ void draw_waveview(void *w_, void* user_data) {
     cairo_move_to(w->crb, 2, half_height_t);
     int i = 0;
     for (;i<wave_view->size;i++) {
-        float w_go = (float)(i+0.5)*step;
-        if (w_go > (float)(width_t-4)) {
-            i--;
+        float w_go = (float)(i*step);
+        cairo_line_to(w->crb, w_go,(float)(half_height_t)+ -wave_view->wave[i]*lstep);
+        if (w_go > (float)(width_t)) {
             break;
         }
-        cairo_line_to(w->crb, w_go,(float)(half_height_t)+ -wave_view->wave[i]*lstep);
     }
     if (!ps->mode) {
         for (;i>-1;i--) {
-            cairo_line_to(w->crb, (float)(i+0.5)*step,(float)(half_height_t)+ wave_view->wave[i]*lstep);
+            cairo_line_to(w->crb, (float)(i*step),(float)(half_height_t)+ wave_view->wave[i]*lstep);
         }
     } else {
         cairo_line_to(w->crb, width_t-4, half_height_t);
@@ -183,6 +182,10 @@ void draw_waveview(void *w_, void* user_data) {
         cairo_line_to(w->crb, width_t-4, half_height_t);
         cairo_stroke(w->crb);
     }
+    cairo_set_line_width(w->crb,4);
+    rounded_waveview(w->crb, 2, 5, width_t-4, height_t-7, extents.width+15);
+    use_frame_color_scheme(w, NORMAL_);
+    cairo_stroke(w->crb);
 }
 
 void set_mode(void *w_, void* user_data) {
@@ -240,7 +243,7 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
     ps->osc_mode->func.value_changed_callback = set_mode;
     ps->osc_stretch = add_knob(ui->win, "Stretch", 20,190,50,65);
     ps->osc_stretch->scale.gravity = EASTWEST;
-    set_adjustment(ps->osc_stretch->adj, 1.0, 1.0, 1.0, 5.0, 0.1, CL_CONTINUOS);
+    set_adjustment(ps->osc_stretch->adj, 1.0, 1.0, 1.0, 32.0, 1.0, CL_CONTINUOS);
 }
 
 void plugin_cleanup(X11_UI *ui) {
