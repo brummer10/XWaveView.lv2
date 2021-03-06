@@ -47,7 +47,7 @@
 	-Wl,--gc-sections -Wl,-z,relro,-z,now -Wl,--exclude-libs,ALL -Wl,-z,defs $(SSE_CFLAGS)
 	LDFLAGS += -I. -shared -lm -Wl,-z,noexecstack -fvisibility=hidden
 	GUI_LDFLAGS += -I./gui -I$(HEADER_DIR) -I$(INCLUDE_DIR) -Wl,-z,noexecstack -fvisibility=hidden \
-	-L. $(LIB_DIR)libxputty.a -shared `pkg-config --cflags --libs cairo x11` -lm 
+	-L. $(LIB_DIR)libxputty.a -shared `pkg-config --cflags --libs cairo x11` -lm
 	# invoke build files
 	OBJECTS = plugin/$(NAME).cpp 
 	GUI_OBJECTS = gui/$(NAME)_ui.c

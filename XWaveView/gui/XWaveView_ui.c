@@ -38,6 +38,7 @@ typedef struct {
 
     OSCLV2URIs   uris;
     Widget_t* osc_scale;
+    Widget_t* osc_stretch;
     Widget_t* osc_mode;
     int mode;
     float *osc;
@@ -151,20 +152,25 @@ void draw_waveview(void *w_, void* user_data) {
     cairo_new_path (w->crb);
 
     if (wave_view->size<1) return;
-    float step = (float)(width_t-10)/(float)wave_view->size+1;
+    float step = ((float)(width_t-4)/(float)(wave_view->size) ) * adj_get_value(ps->osc_stretch->adj);
     float lstep = (float)(half_height_t-10.0);
     cairo_set_line_width(w->cr,2);
     cairo_move_to(w->crb, 2, half_height_t);
     int i = 0;
     for (;i<wave_view->size;i++) {
-        cairo_line_to(w->crb, (float)(i+0.5)*step,(float)(half_height_t)+ -wave_view->wave[i]*lstep);
+        float w_go = (float)(i+0.5)*step;
+        if (w_go > (float)(width_t-4)) {
+            i--;
+            break;
+        }
+        cairo_line_to(w->crb, w_go,(float)(half_height_t)+ -wave_view->wave[i]*lstep);
     }
     if (!ps->mode) {
         for (;i>-1;i--) {
             cairo_line_to(w->crb, (float)(i+0.5)*step,(float)(half_height_t)+ wave_view->wave[i]*lstep);
         }
     } else {
-        cairo_line_to(w->crb, width_t, half_height_t);
+        cairo_line_to(w->crb, width_t-4, half_height_t);
         cairo_line_to(w->crb, 2, half_height_t);
     }
     cairo_close_path(w->crb);
@@ -174,7 +180,7 @@ void draw_waveview(void *w_, void* user_data) {
     cairo_stroke(w->crb);
     if (!ps->mode) {
         cairo_move_to(w->crb, 2, half_height_t);
-        cairo_line_to(w->crb, width_t, half_height_t);
+        cairo_line_to(w->crb, width_t-4, half_height_t);
         cairo_stroke(w->crb);
     }
 }
@@ -188,9 +194,11 @@ void set_mode(void *w_, void* user_data) {
         if (ps->mode) {
             ui->widget[0]->label = "Direct";
             w->label = "Direct";
+            memset(ps->osc,0,OSCSIZE* sizeof(float));
         } else {
             ui->widget[0]->label = "RMS";
             w->label = "RMS";
+            memset(ps->dosc,0,OSCSIZE*RMSSIZE* sizeof(float));
         }
         expose_widget(w);
     }
@@ -201,7 +209,7 @@ void plugin_value_changed(X11_UI *ui, Widget_t *w, PortIndex index) {
 }
 
 void plugin_set_window_size(int *w,int *h,const char * plugin_uri) {
-    (*w) = 320; //set initial width of main window
+    (*w) = 420; //set initial width of main window
     (*h) = 260; //set initial height of main window
 }
 
@@ -220,16 +228,19 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
     lv2_atom_forge_init(&ps->forge, ui->map);
     ui->private_ptr = (void*)ps;
     set_costum_theme(&ui->main);
-    ui->widget[0] = add_lv2_waveview (ui->widget[0], ui->win, NOTIFY, "RMS", ui, 10,  10, 300, 180);
+    ui->widget[0] = add_lv2_waveview (ui->widget[0], ui->win, NOTIFY, "RMS", ui, 10,  10, 400, 180);
     ui->widget[0]->scale.gravity = NORTHWEST;
     ui->widget[0]->func.expose_callback = draw_waveview;
-    ps->osc_scale = add_knob(ui->win, "Scale", 260,190,50,65);
+    ps->osc_scale = add_knob(ui->win, "Scale", 360,190,50,65);
     ps->osc_scale->scale.gravity = SOUTHWEST;
     set_adjustment(ps->osc_scale->adj, 2.0, 2.0, 1.0, 4.0, 0.1, CL_CONTINUOS);
-    ps->osc_mode = add_toggle_button(ui->win, "RMS", 210,200,40,40);
+    ps->osc_mode = add_toggle_button(ui->win, "RMS", 310,200,40,40);
     ps->osc_mode->scale.gravity = SOUTHWEST;
     ps->osc_mode->parent_struct = ui;
     ps->osc_mode->func.value_changed_callback = set_mode;
+    ps->osc_stretch = add_knob(ui->win, "Stretch", 20,190,50,65);
+    ps->osc_stretch->scale.gravity = EASTWEST;
+    set_adjustment(ps->osc_stretch->adj, 1.0, 1.0, 1.0, 5.0, 0.1, CL_CONTINUOS);
 }
 
 void plugin_cleanup(X11_UI *ui) {
