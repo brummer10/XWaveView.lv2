@@ -104,6 +104,7 @@ void XWaveView::run_dsp_(uint32_t n_samples)
     const uint32_t notify_capacity = this->notify->atom.size;
     lv2_atom_forge_set_buffer(&forge, (uint8_t*)notify, notify_capacity);
     lv2_atom_forge_sequence_head(&forge, &notify_frame, 0);
+    if (notify_capacity<n_samples) return;
 
     // do inplace processing at default
     if (output != input)
